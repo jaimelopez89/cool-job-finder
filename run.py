@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Daily job-finding pipeline."""
 
-import hashlib
 import os
 import sys
 from pathlib import Path
@@ -10,7 +9,7 @@ import anthropic
 import yaml
 from dotenv import load_dotenv
 
-from src.db import init_db, insert_job, insert_run, is_duplicate
+from src.db import _content_hash, init_db, insert_job, insert_run, is_duplicate
 from src.geo import assign_geo_bucket, enforce_salary_threshold
 from src.models import Job
 from src.scorer import score_job
@@ -22,11 +21,6 @@ load_dotenv()
 
 DB_PATH = str(Path(__file__).parent / "data" / "jobs.db")
 CONFIG_PATH = str(Path(__file__).parent / "config.yaml")
-
-
-def _content_hash(job: Job) -> str:
-    raw = f"{job.company.lower().strip()}{job.title.lower().strip()}{job.posted_date or ''}"
-    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def deduplicate_jobs(jobs: list[Job]) -> list[Job]:
