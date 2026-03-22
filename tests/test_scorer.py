@@ -58,7 +58,7 @@ def test_compute_composite_weighted():
     assert compute_composite(dimensions) == 30
 
 
-def test_score_job_calls_claude(mocker):
+def test_score_job_calls_claude():
     job = Job(
         title="VP Marketing", company="TechCo", url="https://techco.com/jobs/1",
         location="Remote", description="Lead marketing.", source="adzuna",
@@ -76,3 +76,5 @@ def test_score_job_calls_claude(mocker):
     assert result["score"] == pytest.approx(87, abs=2)
     assert result["fit_summary"] == "Great fit."
     assert result["red_flags"] == ""
+    assert "raw_dimensions" in result
+    assert set(result["raw_dimensions"].keys()) == {"role_fit", "company_fit", "seniority_match", "geography_fit", "industry_fit"}

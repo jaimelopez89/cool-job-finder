@@ -4,7 +4,7 @@ from typing import Any
 
 import anthropic
 
-from src.geo import enforce_salary_threshold
+from src.geo import assign_geo_bucket, enforce_salary_threshold
 from src.models import Job
 
 _WEIGHTS = {
@@ -56,6 +56,9 @@ def parse_score_response(raw: str) -> dict:
 
 
 def compute_composite(dimensions: dict) -> int:
+    missing = [k for k in _WEIGHTS if k not in dimensions]
+    if missing:
+        raise ValueError(f"Missing scoring dimensions: {missing}")
     score = sum(dimensions[k] * _WEIGHTS[k] for k in _WEIGHTS) * 10
     return round(score)
 
@@ -69,19 +72,21 @@ def score_job(job: Job, client: anthropic.Anthropic, config: dict) -> dict[str, 
         description=job.description[:4000],  # cap to avoid token overflow
     )
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception as e:
+        raise RuntimeError(f"Claude API call failed for '{job.title}' at '{job.company}': {e}") from e
 
     parsed = parse_score_response(response.content[0].text)
 
-    # Apply salary threshold enforcement with conservative "remote" default
-    # (pipeline will re-enforce with real geo_bucket)
+    geo_bucket = assign_geo_bucket(job.location, remote=job.remote)
     adjusted_geo_fit, salary_flag = enforce_salary_threshold(
         geography_fit=parsed["geography_fit"],
-        geo_bucket="remote",
+        geo_bucket=geo_bucket,
         salary_str=parsed["salary_estimate"] or job.salary_raw,
         thresholds=config.get("salary_thresholds", {}),
     )
