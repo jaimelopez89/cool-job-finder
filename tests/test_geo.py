@@ -75,3 +75,12 @@ def test_salary_unlisted_adds_flag_no_penalty():
     )
     assert score == 8
     assert "confirm" in flags.lower()
+
+
+def test_salary_european_format_parsed_correctly():
+    # European period-as-thousands-separator
+    score, flags = enforce_salary_threshold(
+        geography_fit=8, geo_bucket="remote", salary_str="€130.000", thresholds={"general_minimum": 130000, "australia": 180000}
+    )
+    assert score == 8  # 130,000 meets the threshold
+    assert flags == ""

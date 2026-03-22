@@ -3,7 +3,7 @@ import sqlite3
 import tempfile
 import os
 from datetime import date
-from src.db import init_db, insert_job, is_duplicate, update_job_field, get_jobs, insert_run
+from src.db import init_db, insert_job, is_duplicate, update_job_field, get_jobs, insert_run, _content_hash
 from src.models import Job
 
 
@@ -87,8 +87,3 @@ def test_insert_run(db_path):
     conn.close()
     assert len(rows) == 1
 
-
-def _content_hash(job: Job) -> str:
-    import hashlib
-    raw = f"{job.company.lower().strip()}{job.title.lower().strip()}{job.posted_date or ''}"
-    return hashlib.sha256(raw.encode()).hexdigest()

@@ -29,13 +29,33 @@ def assign_geo_bucket(location: str, remote: bool = False) -> str:
 
 
 def _parse_salary(salary_str: str) -> Optional[float]:
-    digits = re.findall(r"[\d,]+", salary_str.replace(".", ",").replace(" ", ""))
-    if not digits:
+    """Extract the lower-bound salary value from strings like '€130,000–€160,000' or '€130.000'."""
+    # Remove currency symbols and whitespace
+    cleaned = re.sub(r"[€$£¥\s]", "", salary_str)
+    # Find all number-like sequences (digits with optional separators)
+    # Match patterns like: 130,000 or 130.000 or 130000 or 1.3M
+    candidates = re.findall(r"[\d]+(?:[.,][\d]+)*", cleaned)
+    if not candidates:
         return None
-    try:
-        return float(digits[0].replace(",", ""))
-    except ValueError:
-        return None
+    # Take the first (lower bound) candidate
+    raw = candidates[0]
+    # Determine if period is thousands separator (e.g. 130.000) or decimal (e.g. 95.5)
+    # Heuristic: if ends with exactly 3 digits after the last separator, treat as thousands
+    if re.match(r"^\d{1,3}[.,]\d{3}$", raw):
+        # Thousands separator format: remove it
+        return float(raw.replace(",", "").replace(".", ""))
+    elif "," in raw and re.search(r",\d{3}$", raw):
+        # Comma as thousands separator: 130,000
+        return float(raw.replace(",", ""))
+    elif "." in raw and re.search(r"\.\d{3}$", raw):
+        # Period as thousands separator: 130.000
+        return float(raw.replace(".", ""))
+    else:
+        # Try direct conversion (handles 130000 or 95.5)
+        try:
+            return float(raw.replace(",", "."))
+        except ValueError:
+            return None
 
 
 def enforce_salary_threshold(
