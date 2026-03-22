@@ -66,6 +66,8 @@ target_companies:
     - starburst
     - imply
     - pinecone
+    - anthropic
+    - openai
   lever:
     - huggingface
     - mistral
@@ -80,10 +82,6 @@ target_companies:
     - neon
     - risingwave
   career_pages:
-    - name: "Anthropic"
-      url: "https://www.anthropic.com/careers"
-    - name: "OpenAI"
-      url: "https://openai.com/careers"
     - name: "Octopus Energy"
       url: "https://octopus.energy/careers/"
     - name: "Northvolt"

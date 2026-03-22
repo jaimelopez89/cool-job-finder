@@ -10,7 +10,7 @@ import yaml
 from dotenv import load_dotenv
 
 from src.db import _content_hash, init_db, insert_job, insert_run, is_duplicate
-from src.geo import assign_geo_bucket, enforce_salary_threshold
+from src.geo import assign_geo_bucket
 from src.models import Job
 from src.scorer import score_job
 from src.sources.adzuna import fetch_adzuna_jobs
@@ -114,17 +114,6 @@ def run_pipeline() -> None:
         try:
             geo_bucket = assign_geo_bucket(job.location, remote=job.remote)
             result = score_job(job, client=client, config=config)
-
-            # Re-enforce salary threshold with real geo_bucket (scorer uses job's own geo_bucket,
-            # but pipeline applies a final check to ensure Australia threshold is applied correctly)
-            adj_geo_fit, salary_flag = enforce_salary_threshold(
-                geography_fit=result["raw_dimensions"]["geography_fit"],
-                geo_bucket=geo_bucket,
-                salary_str=result["salary_estimate"] or job.salary_raw,
-                thresholds=config.get("salary_thresholds", {}),
-            )
-            if salary_flag and salary_flag not in result["red_flags"]:
-                result["red_flags"] = f"{result['red_flags']}; {salary_flag}".lstrip("; ")
 
             insert_job(
                 DB_PATH,

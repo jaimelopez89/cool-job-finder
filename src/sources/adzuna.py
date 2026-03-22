@@ -1,4 +1,5 @@
 import re
+import time
 from datetime import date, datetime
 from typing import Optional
 
@@ -92,5 +93,6 @@ def fetch_adzuna_jobs(
                 jobs.append(normalize_adzuna_job(result))
         except Exception as e:
             errors.append(f"Adzuna [{country}]: {e}")
+        time.sleep(0.5)  # Be polite to Adzuna's API
 
     return jobs, errors
