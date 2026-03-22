@@ -25,6 +25,8 @@ Candidate profile:
 - Target companies: Series B–D, leading-edge tech, strong brand recognition in tech circles
 - Location: Helsinki, Finland. Prefers fully remote. Open to southern Finland office.
   Minimum salary: €130k for any role/location. Relocation to Spain/LATAM at ≥€130k.
+- Geography scoring guide: fully remote roles = 9–10 (can be done from Helsinki);
+  Finland/remote-friendly EU = 8–9; Spain/LATAM office = 6–8; other EU = 5–7; US-only office = 1–3.
 
 Job posting:
 Title: {title}

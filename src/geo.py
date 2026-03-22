@@ -64,7 +64,10 @@ def enforce_salary_threshold(
     general_min = thresholds.get("general_minimum", 130000)
 
     if salary_str is None:
-        return geography_fit, "Salary not listed — confirm meets €130k minimum before applying."
+        flag = "Salary not listed — confirm meets €130k minimum before applying."
+        if geo_bucket == "remote":
+            return max(geography_fit, 8), flag
+        return geography_fit, flag
 
     salary = _parse_salary(salary_str)
     if salary is None:
@@ -73,5 +76,9 @@ def enforce_salary_threshold(
     threshold = general_min
     if salary < threshold:
         return 2, f"Salary ({salary_str}) is below the €{threshold:,.0f} threshold for {geo_bucket}."
+
+    # Remote jobs are ideal for a Helsinki-based candidate — guarantee a high floor.
+    if geo_bucket == "remote":
+        return max(geography_fit, 8), ""
 
     return geography_fit, ""

@@ -2,7 +2,9 @@
 """Daily job-finding pipeline."""
 
 import os
+import random
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import anthropic
@@ -164,6 +166,20 @@ def run_pipeline() -> None:
         if not is_duplicate(DB_PATH, url=j.url, content_hash=_content_hash(j))
     ]
     print(f"New jobs (not seen before): {len(new_jobs)}")
+
+    # Interleave by company so no single company dominates the scoring budget.
+    # Round-robin: take one job per company at a time until all are exhausted.
+    by_company: dict[str, list[Job]] = defaultdict(list)
+    for job in new_jobs:
+        by_company[job.company].append(job)
+    buckets = list(by_company.values())
+    interleaved: list[Job] = []
+    while any(buckets):
+        for bucket in buckets:
+            if bucket:
+                interleaved.append(bucket.pop(0))
+    new_jobs = interleaved
+    print(f"Unique companies in queue: {len(by_company)}")
 
     # Cap per-run scoring to avoid runaway API costs
     max_per_run = config.get("max_per_run", 75)
