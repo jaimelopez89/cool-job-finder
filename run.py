@@ -38,6 +38,38 @@ def deduplicate_jobs(jobs: list[Job]) -> list[Job]:
     return result
 
 
+def prefilter_by_title(jobs: list[Job], target_titles: list[str]) -> list[Job]:
+    """Keep only jobs whose title matches at least one target role keyword.
+
+    ATS APIs return ALL open roles at a company (engineers, designers, etc.).
+    This filter keeps only Director+/VP/C-suite marketing and product roles
+    before spending Claude API budget on scoring.
+
+    Strategy: match on *function* keywords (marketing, growth, revenue...) rather
+    than level keywords (director, senior...) to avoid matching engineering directors.
+    C-suite acronyms (cmo, cpo) are matched directly.
+    """
+    # Function keywords that identify the right roles — extracted from target title list
+    function_keywords: set[str] = {
+        "marketing", "growth", "revenue", "demand", "generation",
+        "gtm", "go-to-market", "brand", "content", "communications",
+        "excellence", "developer relations", "devrel", "portfolio",
+        "product management", "product strategy", "product marketing",
+        "field marketing", "market",
+    }
+    # C-suite short titles matched as whole words
+    csuite: set[str] = {"cmo", "cpo", "cgo", "cto", "cro"}
+
+    matched = []
+    for job in jobs:
+        title_lower = job.title.lower()
+        if any(kw in title_lower for kw in function_keywords):
+            matched.append(job)
+        elif any(title_lower == kw or f" {kw}" in title_lower or title_lower.startswith(kw) for kw in csuite):
+            matched.append(job)
+    return matched
+
+
 def load_config() -> dict:
     with open(CONFIG_PATH) as f:
         return yaml.safe_load(f)
@@ -97,23 +129,36 @@ def run_pipeline() -> None:
     # 4. Deduplicate within batch
     all_jobs = deduplicate_jobs(all_jobs)
 
-    # 5. Filter against DB
+    # 5. Pre-filter by title relevance (keeps only marketing/product leadership roles)
+    all_jobs = prefilter_by_title(all_jobs, config["job_titles"])
+    print(f"After title filter: {len(all_jobs)} relevant jobs")
+
+    # 6. Filter against DB (skip already-seen jobs)
     new_jobs = [
         j for j in all_jobs
         if not is_duplicate(DB_PATH, url=j.url, content_hash=_content_hash(j))
     ]
     print(f"New jobs (not seen before): {len(new_jobs)}")
 
-    # 6. Score and insert
+    # Cap per-run scoring to avoid runaway API costs
+    max_per_run = config.get("max_per_run", 75)
+    if len(new_jobs) > max_per_run:
+        print(f"Capping to {max_per_run} jobs this run (set max_per_run in config.yaml to change)")
+        new_jobs = new_jobs[:max_per_run]
+
+    # 7. Score and insert
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     scored_total = 0
     scored_above_threshold = 0
     threshold = config["scoring"]["threshold"]
+    total_to_score = len(new_jobs)
 
-    for job in new_jobs:
+    for i, job in enumerate(new_jobs, 1):
         try:
+            print(f"  Scoring {i}/{total_to_score}: {job.title} @ {job.company}...", end=" ", flush=True)
             geo_bucket = assign_geo_bucket(job.location, remote=job.remote)
             result = score_job(job, client=client, config=config)
+            print(f"score={result['score']}")
 
             insert_job(
                 DB_PATH,
@@ -128,6 +173,7 @@ def run_pipeline() -> None:
             if result["score"] >= threshold:
                 scored_above_threshold += 1
         except Exception as e:
+            print(f"ERROR")
             all_errors.append(f"Scoring [{job.company} - {job.title}]: {e}")
 
     # 7. Write run summary

@@ -43,7 +43,6 @@ adzuna:
     - gb
     - fi
     - es
-    - au
     - us
     - mx
     - br
@@ -92,6 +91,9 @@ target_companies:
 scoring:
   threshold: 60
 
+# Max jobs to score with Claude per run — prevents runaway API costs on first run
+# Increase once the DB is seeded and daily new-job volume is lower
+max_per_run: 75
+
 salary_thresholds:
   general_minimum: 130000
-  australia: 180000

@@ -102,8 +102,8 @@ def main() -> None:
     # Main content
     st.title("Job Leaderboard")
 
-    tab_remote, tab_finland, tab_spain, tab_australia, tab_other = st.tabs([
-        "🌍 Remote", "🇫🇮 Finland", "🇪🇸 Spain / LATAM", "🇦🇺 Australia", "📍 Other"
+    tab_remote, tab_finland, tab_spain, tab_other = st.tabs([
+        "🌍 Remote", "🇫🇮 Finland", "🇪🇸 Spain / LATAM", "📍 Other"
     ])
 
     with tab_remote:
@@ -114,9 +114,6 @@ def main() -> None:
 
     with tab_spain:
         render_tab("spain_latam", "Spain / LATAM", DB_PATH, min_score, hide_dismissed)
-
-    with tab_australia:
-        render_tab("australia", "Australia", DB_PATH, min_score, hide_dismissed)
 
     with tab_other:
         # Higher threshold for "Other" tab to reduce noise

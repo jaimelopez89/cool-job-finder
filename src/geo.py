@@ -7,7 +7,6 @@ _SPAIN_KEYWORDS = {"spain", "españa", "madrid", "barcelona", "valencia", "sevil
 _LATAM_KEYWORDS = {"mexico", "brasil", "brazil", "colombia", "argentina", "chile", "peru",
                    "bogotá", "bogota", "lima", "santiago", "buenos aires", "são paulo",
                    "sao paulo", "mexico city"}
-_AUSTRALIA_KEYWORDS = {"australia", "sydney", "melbourne", "brisbane", "perth", "adelaide", "canberra"}
 _REMOTE_KEYWORDS = {"remote", "anywhere", "distributed", "fully remote"}
 
 
@@ -21,8 +20,6 @@ def assign_geo_bucket(location: str, remote: bool = False) -> str:
         return "remote"
     if any(kw in loc for kw in _FINLAND_KEYWORDS):
         return "finland"
-    if any(kw in loc for kw in _AUSTRALIA_KEYWORDS):
-        return "australia"
     if any(kw in loc for kw in _SPAIN_KEYWORDS | _LATAM_KEYWORDS):
         return "spain_latam"
     return "other"
@@ -65,7 +62,6 @@ def enforce_salary_threshold(
     thresholds: dict,
 ) -> tuple[int, str]:
     general_min = thresholds.get("general_minimum", 130000)
-    australia_min = thresholds.get("australia", 180000)
 
     if salary_str is None:
         return geography_fit, "Salary not listed — confirm meets €130k minimum before applying."
@@ -74,7 +70,7 @@ def enforce_salary_threshold(
     if salary is None:
         return geography_fit, "Salary format unrecognised — confirm meets threshold before applying."
 
-    threshold = australia_min if geo_bucket == "australia" else general_min
+    threshold = general_min
     if salary < threshold:
         return 2, f"Salary ({salary_str}) is below the €{threshold:,.0f} threshold for {geo_bucket}."
 
