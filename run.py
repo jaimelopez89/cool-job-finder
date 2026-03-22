@@ -61,13 +61,37 @@ def prefilter_by_title(jobs: list[Job], target_titles: list[str]) -> list[Job]:
     # C-suite short titles matched as whole words
     csuite: set[str] = {"cmo", "cpo", "cgo", "cto", "cro"}
 
+    # Pure sales execution roles to exclude — AE, SDR, BDR, sales management
+    # (sales-adjacent like enablement, revenue ops, sales marketing are fine)
+    sales_only: set[str] = {
+        "account executive", "account manager",
+        "sales development representative", "sales development rep",
+        "business development representative", "business development rep",
+        "inside sales", "field sales representative",
+    }
+    # Allow these qualifiers to override the sales exclusion (sales-adjacent roles)
+    sales_adjacent: set[str] = {
+        "enablement", "marketing", "operations", "ops", "strategy",
+        "excellence", "engineer", "engineering", "pre-sales", "presales",
+    }
+
     matched = []
     for job in jobs:
         title_lower = job.title.lower()
-        if any(kw in title_lower for kw in function_keywords):
-            matched.append(job)
-        elif any(title_lower == kw or f" {kw}" in title_lower or title_lower.startswith(kw) for kw in csuite):
-            matched.append(job)
+
+        # Positive filter: must match a target function keyword
+        if not (
+            any(kw in title_lower for kw in function_keywords)
+            or any(title_lower == kw or f" {kw}" in title_lower or title_lower.startswith(kw) for kw in csuite)
+        ):
+            continue
+
+        # Negative filter: drop pure sales execution titles
+        if any(kw in title_lower for kw in sales_only):
+            if not any(ok in title_lower for ok in sales_adjacent):
+                continue
+
+        matched.append(job)
     return matched
 
 

@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import date, datetime
 from typing import Optional
@@ -8,6 +9,18 @@ from bs4 import BeautifulSoup
 from src.models import Job
 
 _REMOTE_RE = re.compile(r"\bremote\b", re.IGNORECASE)
+_UA = {"User-Agent": "Mozilla/5.0 (compatible; job-finder-bot/1.0)"}
+
+# Title keywords mirrored from run.py prefilter — used inside fetch_ashby
+# to avoid fetching description pages for irrelevant postings.
+_FUNCTION_KW = {
+    "marketing", "growth", "revenue", "demand", "generation",
+    "gtm", "go-to-market", "brand", "content", "communications",
+    "excellence", "developer relations", "devrel", "portfolio",
+    "product management", "product strategy", "product marketing",
+    "field marketing", "market",
+}
+_CSUITE_KW = {"cmo", "cpo", "cgo", "cto", "cro"}
 
 
 def _is_remote(text: str) -> bool:
@@ -21,7 +34,6 @@ def _strip_html(html: str) -> str:
 def _parse_date(s: Optional[str]) -> Optional[date]:
     if not s:
         return None
-    # Try ISO format variants
     for suffix in ("T", " ", "Z"):
         if suffix in s:
             try:
@@ -34,6 +46,26 @@ def _parse_date(s: Optional[str]) -> Optional[date]:
         return None
 
 
+def _title_matches(title: str) -> bool:
+    """Return True if the job title looks like a target marketing/product role."""
+    tl = title.lower()
+    if any(kw in tl for kw in _FUNCTION_KW):
+        return True
+    return any(tl == kw or f" {kw}" in tl or tl.startswith(kw) for kw in _CSUITE_KW)
+
+
+def _extract_ashby_appdata(html: str) -> Optional[dict]:
+    """Extract window.__appData JSON from an Ashby job board page."""
+    m = re.search(r"window\.__appData\s*=\s*(\{)", html)
+    if not m:
+        return None
+    try:
+        data, _ = json.JSONDecoder().raw_decode(html, m.start(1))
+        return data
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
 def fetch_greenhouse(company_slugs: list[str]) -> tuple[list[Job], list[str]]:
     jobs: list[Job] = []
     errors: list[str] = []
@@ -42,18 +74,18 @@ def fetch_greenhouse(company_slugs: list[str]) -> tuple[list[Job], list[str]]:
         try:
             resp = requests.get(url, timeout=10)
             resp.raise_for_status()
-            for j in resp.json().get("jobs", []):
+            data = resp.json()
+            company_name = data.get("company", {}).get("name") or slug.replace("-", " ").title()
+            for j in data.get("jobs", []):
                 location = j.get("location", {}).get("name", "")
                 jobs.append(Job(
                     title=j.get("title", ""),
-                    company=slug.replace("-", " ").title(),
+                    company=company_name,
                     url=j.get("absolute_url", ""),
                     location=location,
                     description=_strip_html(j.get("content", "")),
                     source="greenhouse",
                     remote=_is_remote(location) or _is_remote(j.get("title", "")),
-                    # Greenhouse public API returns updated_at (last modified), not created_at.
-                    # This means recently-edited old jobs may surface as new — acceptable for v1.
                     posted_date=_parse_date(j.get("updated_at")),
                 ))
         except Exception as e:
@@ -89,26 +121,66 @@ def fetch_lever(company_slugs: list[str]) -> tuple[list[Job], list[str]]:
 
 
 def fetch_ashby(company_slugs: list[str]) -> tuple[list[Job], list[str]]:
+    """Scrape Ashby job boards via jobs.ashbyhq.com/{slug} (public HTML, no auth needed).
+
+    Two-step: fetch board listing for titles → filter by target role → fetch
+    description page only for matching postings (avoids N requests per company).
+    """
     jobs: list[Job] = []
     errors: list[str] = []
+
     for slug in company_slugs:
-        url = f"https://api.ashbyhq.com/posting-public/job-board/{slug}"
+        board_url = f"https://jobs.ashbyhq.com/{slug}"
         try:
-            resp = requests.get(url, timeout=10)
+            resp = requests.get(board_url, headers=_UA, timeout=15)
             resp.raise_for_status()
-            for j in resp.json().get("jobPostings", []):
+            data = _extract_ashby_appdata(resp.text)
+            if data is None:
+                errors.append(f"Ashby [{slug}]: could not parse __appData from page")
+                continue
+
+            org = data.get("organization", {})
+            company_name = org.get("name") or slug.replace("-", " ").title()
+            board_slug = org.get("hostedJobsPageSlug") or slug
+            postings = data.get("jobBoard", {}).get("jobPostings", [])
+
+            for j in postings:
+                if not j.get("isListed", True):
+                    continue
+                title = j.get("title", "")
+                if not _title_matches(title):
+                    continue
+
                 location = j.get("locationName", "")
-                is_remote = j.get("isRemote", False)
+                workplace = (j.get("workplaceType") or "").lower()
+                is_remote = workplace == "remote" or _is_remote(location)
+                job_id = j.get("id", "")
+                job_url = f"https://jobs.ashbyhq.com/{board_slug}/{job_id}"
+
+                # Fetch description from the individual posting page
+                description = ""
+                if job_id:
+                    try:
+                        jresp = requests.get(job_url, headers=_UA, timeout=10)
+                        jdata = _extract_ashby_appdata(jresp.text)
+                        if jdata:
+                            desc_html = jdata.get("posting", {}).get("descriptionHtml", "")
+                            description = _strip_html(desc_html)
+                    except Exception:
+                        pass  # Description missing is acceptable; scoring will note it
+
                 jobs.append(Job(
-                    title=j.get("title", ""),
-                    company=slug.replace("-", " ").title(),
-                    url=j.get("jobUrl", ""),
+                    title=title,
+                    company=company_name,
+                    url=job_url,
                     location="Remote" if is_remote else location,
-                    description=_strip_html(j.get("descriptionHtml", "")),
+                    description=description,
                     source="ashby",
                     remote=is_remote,
-                    posted_date=_parse_date(j.get("updatedAt")),
+                    posted_date=_parse_date(j.get("publishedDate") or j.get("updatedAt")),
                 ))
+
         except Exception as e:
             errors.append(f"Ashby [{slug}]: {e}")
+
     return jobs, errors

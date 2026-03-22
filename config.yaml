@@ -50,36 +50,45 @@ adzuna:
 target_companies:
   greenhouse:
     - databricks
-    - confluent
     - elastic
     - gitlab
-    - sentry
     - launchdarkly
-    - scale-ai
-    - cohere
-    - cockroachdb
-    - grafana
-    - snyk
+    - scaleai          # was: scale-ai
+    - cockroachlabs    # was: cockroachdb
+    - grafanalabs      # was: grafana
     - fivetran
     - starburst
     - imply
-    - pinecone
     - anthropic
-    - openai
+    - planetscale      # moved from lever
+    - jfrog            # moved from lever
   lever:
-    - huggingface
     - mistral
-    - airbyte
-    - planetscale
-    - jfrog
   ashby:
-    - perplexity-ai
+    - confluent        # moved from greenhouse
+    - sentry           # moved from greenhouse
+    - cohere           # moved from greenhouse
+    - pinecone         # moved from greenhouse
+    - openai           # moved from greenhouse
+    - airbyte          # moved from lever
     - weaviate
-    - qdrant
-    - redpanda-data
     - neon
-    - risingwave
   career_pages:
+    # Nordic / Finnish AI & quantum
+    - name: "IQM Quantum Computers"
+      url: "https://www.meetiqm.com/careers/"
+    - name: "Algorithmiq"
+      url: "https://algorithmiq.fi/careers/"
+    - name: "ICEYE"
+      url: "https://www.iceye.com/careers"
+    - name: "Oura"
+      url: "https://ouraring.com/careers"
+    - name: "Reaktor"
+      url: "https://www.reaktor.com/careers/"
+    # European AI labs
+    - name: "Aleph Alpha"
+      url: "https://aleph-alpha.com/careers/"
+    # Existing
     - name: "Octopus Energy"
       url: "https://octopus.energy/careers/"
     - name: "Northvolt"
