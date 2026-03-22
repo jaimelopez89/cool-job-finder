@@ -90,6 +90,7 @@ target_companies:
 
 scoring:
   threshold: 60
+  provider: openai   # openai or anthropic
 
 # Max jobs to score with Claude per run — prevents runaway API costs on first run
 # Increase once the DB is seeded and daily new-job volume is lower

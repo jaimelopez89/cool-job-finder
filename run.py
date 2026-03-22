@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import anthropic
+import openai
 import yaml
 from dotenv import load_dotenv
 
@@ -147,7 +148,13 @@ def run_pipeline() -> None:
         new_jobs = new_jobs[:max_per_run]
 
     # 7. Score and insert
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    provider = config.get("scoring", {}).get("provider", "anthropic")
+    if provider == "openai":
+        client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        print("Scoring with OpenAI (gpt-4.1-nano)")
+    else:
+        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        print("Scoring with Anthropic (claude-haiku-4-5)")
     scored_total = 0
     scored_above_threshold = 0
     threshold = config["scoring"]["threshold"]

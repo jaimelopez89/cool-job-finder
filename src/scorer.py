@@ -3,6 +3,7 @@ import re
 from typing import Any
 
 import anthropic
+import openai
 
 from src.geo import assign_geo_bucket, enforce_salary_threshold
 from src.models import Job
@@ -23,7 +24,7 @@ Candidate profile:
 - Preferred industries: AI/ML, real-time data/streaming, developer tools, cloud infrastructure, SaaS, energy tech
 - Target companies: Series B–D, leading-edge tech, strong brand recognition in tech circles
 - Location: Helsinki, Finland. Prefers fully remote. Open to southern Finland office.
-  Minimum salary: €130k for any role/location. Relocation to Spain/LATAM at ≥€130k, Australia at ≥€180k.
+  Minimum salary: €130k for any role/location. Relocation to Spain/LATAM at ≥€130k.
 
 Job posting:
 Title: {title}
@@ -52,7 +53,7 @@ def parse_score_response(raw: str) -> dict:
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Could not parse Claude response as JSON: {e}\nRaw: {raw[:300]}")
+        raise ValueError(f"Could not parse scorer response as JSON: {e}\nRaw: {raw[:300]}")
 
 
 def compute_composite(dimensions: dict) -> int:
@@ -63,7 +64,25 @@ def compute_composite(dimensions: dict) -> int:
     return round(score)
 
 
-def score_job(job: Job, client: anthropic.Anthropic, config: dict) -> dict[str, Any]:
+def _call_anthropic(client: anthropic.Anthropic, prompt: str) -> str:
+    response = client.messages.create(
+        model="claude-haiku-4-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text
+
+
+def _call_openai(client: openai.OpenAI, prompt: str) -> str:
+    response = client.chat.completions.create(
+        model="gpt-4.1-nano",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.choices[0].message.content
+
+
+def score_job(job: Job, client: Any, config: dict) -> dict[str, Any]:
     prompt = _PROMPT_TEMPLATE.format(
         title=job.title,
         company=job.company,
@@ -73,15 +92,14 @@ def score_job(job: Job, client: anthropic.Anthropic, config: dict) -> dict[str, 
     )
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        if isinstance(client, openai.OpenAI):
+            raw = _call_openai(client, prompt)
+        else:
+            raw = _call_anthropic(client, prompt)
     except Exception as e:
-        raise RuntimeError(f"Claude API call failed for '{job.title}' at '{job.company}': {e}") from e
+        raise RuntimeError(f"Scorer API call failed for '{job.title}' at '{job.company}': {e}") from e
 
-    parsed = parse_score_response(response.content[0].text)
+    parsed = parse_score_response(raw)
 
     geo_bucket = assign_geo_bucket(job.location, remote=job.remote)
     adjusted_geo_fit, salary_flag = enforce_salary_threshold(
