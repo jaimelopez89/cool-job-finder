@@ -41,15 +41,26 @@ def scrape_career_page(
         soup = BeautifulSoup(resp.text, "html.parser")
         base_url = f"{urlparse(careers_url).scheme}://{urlparse(careers_url).netloc}"
 
+        # Use find_job_links to get domain/path-filtered URLs
+        valid_links = set(find_job_links(resp.text, base_url, careers_url))
+        seen_urls: set[str] = set()
+
         for a in soup.find_all("a", href=True):
+            href = urljoin(base_url, a["href"])
+            if href not in valid_links:
+                continue
+            if href in seen_urls:
+                continue
             text = a.get_text(strip=True)
             if not _title_matches(text, target_titles):
                 continue
-            href = urljoin(base_url, a["href"])
+            seen_urls.add(href)
             jobs.append(Job(
                 title=text,
                 company=name,
                 url=href,
+                # Scraper only fetches the careers listing page, not individual job pages.
+                # Location is inferred from link text; full description requires visiting the job URL.
                 location="Remote" if _REMOTE_RE.search(text) else "See posting",
                 description=f"See full job description at: {href}",
                 source="scraper",

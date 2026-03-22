@@ -44,7 +44,7 @@ def normalize_adzuna_job(raw: dict) -> Job:
     salary_max = raw.get("salary_max")
     salary_raw: Optional[str] = None
     if salary_min:
-        salary_raw = f"€{salary_min:,.0f}" + (f"–€{salary_max:,.0f}" if salary_max else "")
+        salary_raw = f"{salary_min:,.0f}" + (f"–{salary_max:,.0f}" if salary_max else "")
 
     remote = bool(_REMOTE_PATTERN.search(location)) or bool(_REMOTE_PATTERN.search(title))
 
@@ -67,10 +67,11 @@ def fetch_adzuna_jobs(
     titles: list[str],
     country_codes: list[str],
     results_per_page: int = 50,
+    titles_per_query: int = 10,
 ) -> tuple[list[Job], list[str]]:
     jobs: list[Job] = []
     errors: list[str] = []
-    queries = build_search_queries(titles, country_codes)
+    queries = build_search_queries(titles, country_codes, titles_per_query)
 
     for q in queries:
         country = q["country"]
@@ -83,7 +84,6 @@ def fetch_adzuna_jobs(
                     "app_key": api_key,
                     "what": q["what"],
                     "results_per_page": results_per_page,
-                    "content-type": "application/json",
                 },
                 timeout=10,
             )

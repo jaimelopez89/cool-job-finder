@@ -52,6 +52,8 @@ def fetch_greenhouse(company_slugs: list[str]) -> tuple[list[Job], list[str]]:
                     description=_strip_html(j.get("content", "")),
                     source="greenhouse",
                     remote=_is_remote(location) or _is_remote(j.get("title", "")),
+                    # Greenhouse public API returns updated_at (last modified), not created_at.
+                    # This means recently-edited old jobs may surface as new — acceptable for v1.
                     posted_date=_parse_date(j.get("updated_at")),
                 ))
         except Exception as e:
