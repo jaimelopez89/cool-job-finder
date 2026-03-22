@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 import streamlit as st
-import yaml
 
 from src.db import get_jobs, get_last_run, init_db, update_job_field
 
@@ -13,11 +12,6 @@ DB_PATH = str(Path(__file__).parent / "data" / "jobs.db")
 CONFIG_PATH = str(Path(__file__).parent / "config.yaml")
 
 st.set_page_config(page_title="Cool Job Finder", page_icon="🎯", layout="wide")
-
-
-def load_config() -> dict:
-    with open(CONFIG_PATH) as f:
-        return yaml.safe_load(f)
 
 
 def score_badge(score: int) -> str:
