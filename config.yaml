@@ -1,0 +1,99 @@
+job_titles:
+  - "CMO"
+  - "Chief Marketing Officer"
+  - "Chief Product Officer"
+  - "VP Marketing"
+  - "VP Product Marketing"
+  - "VP Growth"
+  - "VP Demand Generation"
+  - "VP Revenue Marketing"
+  - "VP GTM Strategy"
+  - "Chief Growth Officer"
+  - "Director of Marketing"
+  - "Senior Director of Marketing"
+  - "Director of Product Marketing"
+  - "Senior Director of Product Marketing"
+  - "Director of Marketing Operations"
+  - "Senior Director of Marketing Operations"
+  - "Director of Revenue Marketing"
+  - "Senior Director of Revenue Marketing"
+  - "Director of Demand Generation"
+  - "Senior Director of Demand Generation"
+  - "Director of Growth Marketing"
+  - "Senior Director of Growth Marketing"
+  - "Director of GTM Strategy"
+  - "Senior Director of GTM Strategy"
+  - "Head of Marketing"
+  - "Head of Product Marketing"
+  - "Head of Demand Generation"
+  - "Head of Growth"
+  - "Director of Product Excellence"
+  - "Director of Revenue Operations"
+  - "VP of Product Management"
+  - "Director of Product Management"
+  - "Director of Product Strategy"
+  - "Head of Product"
+  - "Director of Field Marketing"
+  - "VP of Developer Relations"
+  - "Director of Developer Relations"
+  - "Director of Portfolio Marketing"
+
+adzuna:
+  country_codes:
+    - gb
+    - fi
+    - es
+    - au
+    - us
+    - mx
+    - br
+  results_per_page: 50
+
+target_companies:
+  greenhouse:
+    - databricks
+    - confluent
+    - elastic
+    - gitlab
+    - sentry
+    - launchdarkly
+    - scale-ai
+    - cohere
+    - cockroachdb
+    - grafana
+    - snyk
+    - fivetran
+    - starburst
+    - imply
+    - pinecone
+  lever:
+    - huggingface
+    - mistral
+    - airbyte
+    - planetscale
+    - jfrog
+  ashby:
+    - perplexity-ai
+    - weaviate
+    - qdrant
+    - redpanda-data
+    - neon
+    - risingwave
+  career_pages:
+    - name: "Anthropic"
+      url: "https://www.anthropic.com/careers"
+    - name: "OpenAI"
+      url: "https://openai.com/careers"
+    - name: "Octopus Energy"
+      url: "https://octopus.energy/careers/"
+    - name: "Northvolt"
+      url: "https://northvolt.com/careers/"
+    - name: "Stability AI"
+      url: "https://stability.ai/careers"
+
+scoring:
+  threshold: 60
+
+salary_thresholds:
+  general_minimum: 130000
+  australia: 180000
